@@ -11,3 +11,10 @@ export type CreateEventSchema = z.infer<typeof CreateEventSchema>;
 export const JoinEventSchema = z.object({
   id: z.number().int().positive(),
 });
+
+export const LeaveEventSchema = z.object({
+  id: z.number().int().positive(),
+});
+
+export const UpdateEventSchema = CreateEventSchema;
+export type UpdateEventSchema = z.infer<typeof UpdateEventSchema>;

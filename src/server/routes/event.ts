@@ -1,4 +1,4 @@
-import { CreateEventSchema, JoinEventSchema } from "@/shared/api";
+import { CreateEventSchema, JoinEventSchema, LeaveEventSchema, UpdateEventSchema } from "@/shared/api";
 import { prisma } from "../db";
 import { isAuth, procedure, router } from "../trpc";
 import { z } from "zod";
@@ -30,6 +30,7 @@ export const eventRouter = router({
           title: true,
           description: true,
           date: true,
+          authorId: true,
           participations: {
             select: {
               user: {
@@ -61,6 +62,44 @@ export const eventRouter = router({
         data: {
           eventId: input.id,
           userId: user.id,
+        },
+      });
+    }),
+  leave: procedure
+    .input(LeaveEventSchema)
+    .use(isAuth)
+    .mutation(({ input, ctx: { user } }) => {
+      return prisma.participation.delete({
+        where: {
+          userId_eventId: {
+            userId: user.id,
+            eventId: input.id,
+          },
+        },
+      });
+    }),
+  update: procedure
+    .input(
+      z.object({
+        id: z.number(),
+        data: UpdateEventSchema,
+      })
+    )
+    .use(isAuth)
+    .mutation(async ({ input, ctx: { user } }) => {
+      const event = await prisma.event.findUnique({
+        where: { id: input.id },
+        select: { authorId: true },
+      });
+
+      if (!event || event.authorId !== user.id) {
+        throw new Error("Только автор может редактировать событие");
+      }
+      return prisma.event.update({
+        where: { id: input.id },
+        data: {
+          ...input.data,
+          updatedAt: new Date(),
         },
       });
     }),
